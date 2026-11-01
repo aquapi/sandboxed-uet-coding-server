@@ -1,7 +1,7 @@
 import json
 from urllib.request import Request, urlopen
 
-with open("./client/code.py") as codeFile, open("./client/input.txt") as inputFile, open("./client/output.json", 'wb') as outputFile:
+with open("./client/code.py") as codeFile, open("./client/input.txt") as inputFile, open("./client/output.json", 'w') as outputFile:
     req = Request(
         "http://127.0.0.1:8001/run",
         data=json.dumps(
@@ -15,12 +15,12 @@ with open("./client/code.py") as codeFile, open("./client/input.txt") as inputFi
         method="POST",
     )
 
-    response = urlopen(req).read()
-    _ = outputFile.write(response)
+    result = json.loads(urlopen(req).read())
+    _ = outputFile.write(json.dumps(result, indent=2))
 
-    result = json.loads(response)
-
+    print('```')
     if result["error"]:
         print(result["error"])
     else:
         print(result["stdout"])
+    print('```')
