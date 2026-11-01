@@ -81,24 +81,9 @@ def run_code(req: RunRequest):
 
         _ = session.execute(f"""
 def f():
-    import builtins
+    import sys
     import io
-
-    stdin = io.StringIO({testInput!r})
-
-    def finput(prompt = ""):
-        line = stdin.readline()
-        if line == "":
-            raise EOFError
-
-        if line.endswith("\\n"):
-            line = line[:-1]
-        if line.endswith("\\r"):
-            line = line[:-1]
-
-        return line
-
-    builtins.input = finput
+    sys.stdin = io.StringIO({testInput!r})
 f()
 del f
 """)
