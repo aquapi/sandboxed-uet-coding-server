@@ -16,3 +16,4 @@ dependencies = [
 [tool.basedpyright]
 venvPath = "."
 venv = ".venv"
+reportAny = "none"

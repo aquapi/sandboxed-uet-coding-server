@@ -3,7 +3,6 @@ Python Server for Local Code Execution
 Copy this file to your machine and run: python python_server.py
 """
 
-import json
 from threading import Timer
 
 import eryx
@@ -59,7 +58,7 @@ def run_code(req: RunRequest):
     if timeout > 30:
         raise HTTPException(status_code=400, detail="Malicious timeout (max 30s).")
 
-    code = req.code
+    code = req.code.strip()
     if len(code) > 20000:
         raise HTTPException(
             status_code=400, detail="Code too large (max 20000 characters)."
@@ -71,27 +70,35 @@ def run_code(req: RunRequest):
 
     session = eryx.Session(
         resource_limits=eryx.ResourceLimits(max_memory_bytes=256_000_000),
-        result_variable=''
+        result_variable="",
     )
 
     if req.input:
-        print(f"Received input: {req.input!r}")
-        print(f"Input length: {len(req.input)}")
+        testInput = req.input.strip()
+
+        print(f"Received input: {testInput!r}")
+        print(f"Input length: {len(testInput)}")
 
         _ = session.execute(f"""
 def f():
-  import builtins
-  import io
+    import builtins
+    import io
 
-  stdin = io.StringIO({json.dumps(req.input)})
+    stdin = io.StringIO({testInput!r})
 
-  def finput():
-      line = stdin.readline()
-      if not line:
-          raise EOFError
-      return line.rstrip("\\n")
+    def finput(prompt = ""):
+        line = stdin.readline()
+        if line == "":
+            raise EOFError
 
-  builtins.input = finput
+        if line.endswith("\\n"):
+            line = line[:-1]
+        if line.endswith("\\r"):
+            line = line[:-1]
+
+        return line
+
+    builtins.input = finput
 f()
 del f
 """)
@@ -105,7 +112,7 @@ del f
         return RunResult(
             stdout=result.stdout_text,
             stderr=result.stderr_text,
-            exit_code=-1 if len(result.stderr_text) > 0 else 0,
+            exit_code=0,
             timed_out=False,
         )
     except eryx.CancelledError:
