@@ -9,5 +9,6 @@ wheels/
 # Virtual environments
 .venv
 
-# client
+# client & session
 /client/output.json
+/session/**/*

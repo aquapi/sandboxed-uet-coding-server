@@ -1,24 +1,24 @@
 # Server
 
-Local server.
-
-## `uv`
+Local server to run python code in a WASM sandbox.
 
 ```sh
+# using pip
+pip install fastapi uvicorn pyeryx
+python server.py
+
+# using uv
 uv sync
 uv run server.py
 ```
 
-## `pip`
+Network access is not allowed.
 
-```sh
-pip install fastapi uvicorn pyeryx
-python server.py
-```
+File reading & writing is allowed only in [./session](./session) directory.
 
 # Client
 
-Test client.
+Local test client.
 
 ```sh
 python client.py

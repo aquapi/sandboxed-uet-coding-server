@@ -3,16 +3,22 @@ Python Server for Local Code Execution
 Copy this file to your machine and run: python python_server.py
 """
 
+from collections.abc import Awaitable, Callable
 from threading import Timer
 
 import eryx
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from starlette.middleware.base import RequestResponseEndpoint
 
 app = FastAPI(title="Python Runner API")
+
+session = eryx.Session(
+    resource_limits=eryx.ResourceLimits(max_memory_bytes=256_000_000),
+    result_variable="",
+    volumes=[("./session", "/", False)],
+)
 
 # Enable CORS for frontend access
 app.add_middleware(
@@ -28,7 +34,7 @@ app.add_middleware(
 # Add middleware to handle preflight requests with Private Network Access
 @app.middleware("http")
 async def add_private_network_access_headers(
-    request: Request, call_next: RequestResponseEndpoint
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ):
     response = await call_next(request)
     # Enable Private Network Access for Chrome/Edge
@@ -68,10 +74,7 @@ def run_code(req: RunRequest):
     print(code if len(code) < 500 else code[:500] + "...")
     print("```")
 
-    session = eryx.Session(
-        resource_limits=eryx.ResourceLimits(max_memory_bytes=256_000_000),
-        result_variable="",
-    )
+    session.reset()
 
     if req.input:
         testInput = req.input.strip()
@@ -80,18 +83,15 @@ def run_code(req: RunRequest):
         print(f"Input length: {len(testInput)}")
 
         _ = session.execute(f"""
-def f():
-    import sys
-    import io
-    sys.stdin = io.StringIO({testInput!r})
-f()
-del f
+import sys
+import io
+sys.stdin = io.StringIO({testInput!r})
 """)
-
-    token = eryx.CancelToken()
-    Timer(timeout, token.cancel).start()
+        session.clear_state()
 
     try:
+        token = eryx.CancelToken()
+        Timer(timeout, token.cancel).start()
         result = session.execute(code, cancel=token)
 
         return RunResult(
@@ -107,7 +107,7 @@ del f
             exit_code=None,
             timed_out=True,
         )
-    except Exception as e:
+    except Exception as e:  # noqa
         return RunResult(
             stdout="", stderr="", exit_code=None, timed_out=False, error=str(e)
         )
@@ -119,8 +119,5 @@ def health():
 
 
 if __name__ == "__main__":
-    print("Starting Python Code Execution Server...")
-    print("Server will run at: http://127.0.0.1:8001")
-    print("Make sure you have installed: pip install fastapi uvicorn pyeryx")
-    print("Ready to execute Python code locally!")
+    print("Requires: pip install fastapi uvicorn pyeryx")
     uvicorn.run("__main__:app", host="127.0.0.1", port=8001, reload=False)
