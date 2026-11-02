@@ -14,7 +14,7 @@ uv run server.py
 
 Network access is not allowed.
 
-File reading & writing is allowed only in [./session](./session) directory.
+File reading & writing is allowed only in [.uet-coding-fs](./.uet-coding-fs) directory.
 
 # Client
 
