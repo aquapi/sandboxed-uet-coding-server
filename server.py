@@ -65,22 +65,13 @@ class RunResult(BaseModel):
 
 @app.post("/run", response_model=RunResult)
 def run_code(req: RunRequest):
-    timeout = req.timeout or 5
-    if timeout > 30:
-        raise HTTPException(status_code=400, detail="Malicious timeout (max 30s).")
-
     code = req.code.strip()
     if len(code) > 20000:
         raise HTTPException(
             status_code=400, detail="Code too large (max 20000 characters)."
         )
 
-    logger.info(
-        f"Code:\n```py\n{code if len(code) < 500 else code[:500] + '...'}\n```"
-    )
-
-    # recreate the sandbox
-    session.reset()
+    logger.info(f"Code:\n```py\n{code if len(code) < 500 else code[:500] + '...'}\n```")
 
     if req.input:
         testInput = req.input.strip()
@@ -99,8 +90,10 @@ sys.stdin = io.StringIO({testInput!r})
 
     try:
         token = eryx.CancelToken()
-        Timer(timeout, token.cancel).start()
+        Timer(req.timeout if req.timeout and req.timeout <= 15 else 15, token.cancel).start()
+
         result = session.execute(code, cancel=token)
+        session.reset()
 
         return RunResult(
             stdout=result.stdout_text,
@@ -115,7 +108,7 @@ sys.stdin = io.StringIO({testInput!r})
             exit_code=None,
             timed_out=True,
         )
-    except Exception as e:  # noqa
+    except eryx.ExecutionError as e:
         return RunResult(
             stdout="", stderr="", exit_code=None, timed_out=False, error=str(e)
         )
@@ -138,7 +131,6 @@ if __name__ == "__main__":
 
     # create WASM sandbox session
     session = eryx.Session(
-        resource_limits=eryx.ResourceLimits(max_memory_bytes=256_000_000),
         result_variable="",
         volumes=[(VFS_MOUNT_PATH, "/", False)],
     )
