@@ -3,22 +3,27 @@ Python Server for Local Code Execution
 Copy this file to your machine and run: python python_server.py
 """
 
+import logging
+import logging.config
+import os
 from collections.abc import Awaitable, Callable
 from threading import Timer
 
 import eryx
 import uvicorn
+import uvicorn.config
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+# use uvicorn logger
+logging.config.dictConfig(uvicorn.config.LOGGING_CONFIG)
+logger = logging.getLogger("uvicorn.error")
+
 app = FastAPI(title="Python Runner API")
 
-session = eryx.Session(
-    resource_limits=eryx.ResourceLimits(max_memory_bytes=256_000_000),
-    result_variable="",
-    volumes=[("./session", "/", False)],
-)
+VFS_MOUNT_PATH = "./.uet-coding-fs"
+session: eryx.Session
 
 # Enable CORS for frontend access
 app.add_middleware(
@@ -70,23 +75,26 @@ def run_code(req: RunRequest):
             status_code=400, detail="Code too large (max 20000 characters)."
         )
 
-    print("Received code: ```py")
-    print(code if len(code) < 500 else code[:500] + "...")
-    print("```")
+    logger.info(
+        f"Code:\n```py\n{code if len(code) < 500 else code[:500] + '...'}\n```"
+    )
 
+    # recreate the sandbox
     session.reset()
 
     if req.input:
         testInput = req.input.strip()
 
-        print(f"Received input: {testInput!r}")
-        print(f"Input length: {len(testInput)}")
+        logger.info(f"Input:\n```\n{testInput!r}\n``` ({len(testInput)} characters)")
 
+        # inject input into current session
         _ = session.execute(f"""
 import sys
 import io
 sys.stdin = io.StringIO({testInput!r})
 """)
+
+        # clear sys & io variable
         session.clear_state()
 
     try:
@@ -119,5 +127,21 @@ def health():
 
 
 if __name__ == "__main__":
-    print("Requires: pip install fastapi uvicorn pyeryx")
+    # create vfs target mount directory
+    try:
+        os.mkdir(VFS_MOUNT_PATH)
+        logger.info(f"Created `{VFS_MOUNT_PATH}`.")
+    except FileExistsError:
+        logger.info(f"Created `{VFS_MOUNT_PATH}` (already existed).")
+    except:
+        raise
+
+    # create WASM sandbox session
+    session = eryx.Session(
+        resource_limits=eryx.ResourceLimits(max_memory_bytes=256_000_000),
+        result_variable="",
+        volumes=[(VFS_MOUNT_PATH, "/", False)],
+    )
+    logger.info("Created WASM sandbox.")
+
     uvicorn.run("__main__:app", host="127.0.0.1", port=8001, reload=False)
