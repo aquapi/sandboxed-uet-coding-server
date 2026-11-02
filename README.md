@@ -8,7 +8,7 @@ pip install fastapi uvicorn pyeryx
 python server.py
 
 # using uv
-uv sync
+uv sync --frozen
 uv run server.py
 ```
 
