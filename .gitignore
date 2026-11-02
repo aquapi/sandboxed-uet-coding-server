@@ -11,4 +11,4 @@ wheels/
 
 # client & session
 /client/output.json
-/.uet-coding-fs/**/*
+/.uet-coding-fs
