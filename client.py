@@ -1,7 +1,9 @@
 import json
 from urllib.request import Request, urlopen
 
-with open(f"./client/{input('target: ')}.py") as codeFile, open("./client/input.txt") as inputFile, open("./client/output.json", 'w') as outputFile:
+target = input('target: ')
+
+with open(f"./client/{target}/main.py") as codeFile, open(f"./client/{target}/input.txt") as inputFile, open(f"./client/{target}/output.json", 'w') as outputFile:
     req = Request(
         "http://127.0.0.1:8001/run",
         data=json.dumps(

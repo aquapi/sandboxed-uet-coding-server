@@ -10,5 +10,5 @@ wheels/
 .venv
 
 # client & session
-/client/output.json
+/client/**/output.json
 /.uet-coding-fs
