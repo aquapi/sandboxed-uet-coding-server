@@ -22,7 +22,7 @@ logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(title="Python Runner API")
 
-VFS_MOUNT_PATH = "./.uet-coding-fs"
+VFS_WRITABLE_PATH = "./.uet-coding-fs"
 session: eryx.Session
 
 # Enable CORS for frontend access
@@ -34,7 +34,6 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
 
 # Add middleware to handle preflight requests with Private Network Access
 @app.middleware("http")
@@ -122,17 +121,17 @@ def health():
 if __name__ == "__main__":
     # create vfs target mount directory
     try:
-        os.mkdir(VFS_MOUNT_PATH)
-        logger.info(f"Created `{VFS_MOUNT_PATH}`.")
+        os.mkdir(VFS_WRITABLE_PATH)
+        logger.info(f"Created `{VFS_WRITABLE_PATH}`.")
     except FileExistsError:
-        logger.info(f"Created `{VFS_MOUNT_PATH}` (already existed).")
+        logger.info(f"Created `{VFS_WRITABLE_PATH}` (already existed).")
     except:
         raise
 
     # create WASM sandbox session
     session = eryx.Session(
         result_variable="",
-        volumes=[(VFS_MOUNT_PATH, "/", False)],
+        volumes=[(VFS_WRITABLE_PATH, "/data", False)],
     )
     logger.info("Created WASM sandbox.")
 

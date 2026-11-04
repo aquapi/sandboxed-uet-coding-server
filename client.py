@@ -21,7 +21,7 @@ with open(f"./client/{target}/main.py") as codeFile, open(f"./client/{target}/in
     _ = outputFile.write(json.dumps(result, indent=2))
 
     print('```')
-    if result["error"]:
+    if "error" in result:
         print(result["error"])
     else:
         print(result["stdout"])

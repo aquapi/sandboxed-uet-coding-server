@@ -1,3 +1,3 @@
-with open('/output.txt', 'w') as f:
+with open('/data/output.txt', 'w') as f:
   _ = f.write(input())
   print('written to /a.txt')
